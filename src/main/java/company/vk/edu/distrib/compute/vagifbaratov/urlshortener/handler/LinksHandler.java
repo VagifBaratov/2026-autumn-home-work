@@ -91,7 +91,7 @@ public class LinksHandler implements HttpHandler {
         writeTextBodyWithStatusCode(exchange, 201, responseBody);
     }
 
-    private boolean existId(String id) throws IOException{
+    private boolean existId(String id) throws IOException {
         try {
             dao.get(id);
             return true;
