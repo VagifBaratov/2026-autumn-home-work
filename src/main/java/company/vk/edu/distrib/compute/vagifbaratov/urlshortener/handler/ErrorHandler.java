@@ -24,7 +24,9 @@ public class ErrorHandler implements HttpHandler {
             } catch (IllegalArgumentException e) {
                 exchange.sendResponseHeaders(422, -1);
             } catch (AuthenticationException e) {
-                exchange.getResponseHeaders().add("WWW-Authenticate", "Basic realm=\"url-shortener\", charset=\"UTF-8\"");
+                exchange.getResponseHeaders().add(
+                        "WWW-Authenticate", "Basic realm=\"url-shortener\", charset=\"UTF-8\""
+                );
                 exchange.sendResponseHeaders(401, -1);
             } catch (Exception e) {
                 exchange.sendResponseHeaders(500, -1);

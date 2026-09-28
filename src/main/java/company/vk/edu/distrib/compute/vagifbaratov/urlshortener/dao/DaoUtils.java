@@ -6,9 +6,11 @@ import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 
-public final class PersistentDaoUtils {
+public final class DaoUtils {
+    public static final int SHORTLINK_LENGTH = 10;
+    public static final String USERNAME_PATTERN = "^[A-Za-z][A-Za-z0-9._-]*$";
 
-    private PersistentDaoUtils() {
+    private DaoUtils() {
     }
 
     public static void loadStorage(

@@ -7,6 +7,8 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.DaoUtils.SHORTLINK_LENGTH;
+
 public class InMemoryLinksDao implements Dao<String> {
     private final ConcurrentMap<String, String> storage = new ConcurrentHashMap<>();
 
@@ -38,7 +40,7 @@ public class InMemoryLinksDao implements Dao<String> {
     }
 
     private static void validateKey(String key) {
-        if (key.length() != 10) {
+        if (key.length() != SHORTLINK_LENGTH) {
             throw new IllegalArgumentException("invalid key: " + key);
         }
     }

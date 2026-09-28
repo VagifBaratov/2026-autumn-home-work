@@ -8,8 +8,9 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.PersistentDaoUtils.loadStorage;
-import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.PersistentDaoUtils.storeStorage;
+import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.DaoUtils.loadStorage;
+import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.DaoUtils.storeStorage;
+import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.DaoUtils.SHORTLINK_LENGTH;
 
 public class PersistentLinksDao implements Dao<String> {
     private final ConcurrentMap<String, String> storage = new ConcurrentHashMap<>();
@@ -49,7 +50,7 @@ public class PersistentLinksDao implements Dao<String> {
     }
 
     private static void validateKey(String key) {
-        if (key.length() != 10) {
+        if (key.length() != SHORTLINK_LENGTH) {
             throw new IllegalArgumentException("invalid key: " + key);
         }
     }

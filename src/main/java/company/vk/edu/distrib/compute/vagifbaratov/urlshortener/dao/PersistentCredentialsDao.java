@@ -8,8 +8,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.PersistentDaoUtils.loadStorage;
-import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.PersistentDaoUtils.storeStorage;
+import static company.vk.edu.distrib.compute.vagifbaratov.urlshortener.dao.DaoUtils.*;
 
 public class PersistentCredentialsDao implements Dao<String> {
     private final ConcurrentMap<String, String> storage = new ConcurrentHashMap<>();
@@ -53,7 +52,7 @@ public class PersistentCredentialsDao implements Dao<String> {
     }
 
     private static void validateUsername(String user) {
-        if (!user.matches("^[A-Za-z][A-Za-z0-9._-]*$")) {
+        if (!user.matches(USERNAME_PATTERN)) {
             throw new IllegalArgumentException("Invalid username: " + user);
         }
     }
