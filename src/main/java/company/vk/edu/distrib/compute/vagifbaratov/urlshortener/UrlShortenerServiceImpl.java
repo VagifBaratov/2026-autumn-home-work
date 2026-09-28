@@ -57,13 +57,13 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
         try {
             linksDao.close();
         } catch (IOException e) {
-            log.info("Closing linksDao resulted in error: {}", e.getMessage());
+            log.debug("Closing linksDao resulted in error: {}", e.getMessage());
         }
 
         try {
             credentialsDao.close();
         } catch (IOException e) {
-            log.info("Closing credentialsDao resulted in error: {}", e.getMessage());
+            log.debug("Closing credentialsDao resulted in error: {}", e.getMessage());
         }
     }
 }

@@ -13,6 +13,7 @@ import java.util.Objects;
 
 public class BasicAuthHandler implements HttpHandler {
     private static final String BASIC_PREFIX = "Basic ";
+    private static final int CREDENTIALS_LENGTH = 2;
     private final HttpHandler delegate;
     private final Dao<String> credentialsDao;
 
@@ -35,7 +36,7 @@ public class BasicAuthHandler implements HttpHandler {
                 StandardCharsets.UTF_8
         ).split(":", 2);
 
-        if (credentials.length != 2) {
+        if (credentials.length != CREDENTIALS_LENGTH) {
             throw new AuthenticationException("Unauthorized");
         }
 
