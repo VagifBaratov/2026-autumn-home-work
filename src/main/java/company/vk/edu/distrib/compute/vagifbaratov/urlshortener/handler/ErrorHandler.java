@@ -15,20 +15,20 @@ public class ErrorHandler implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        try {
-            delegate.handle(exchange);
-        } catch (NoSuchElementException e) {
-            exchange.sendResponseHeaders(404, -1);
-        } catch (IllegalArgumentException e) {
-            exchange.sendResponseHeaders(422, -1);
-        } catch (AuthenticationException e) {
-            exchange.getResponseHeaders().add("WWW-Authenticate", "Basic realm=\"url-shortener\", charset=\"UTF-8\"");
-            exchange.sendResponseHeaders(401, -1);
-        } catch (Exception e) {
-            exchange.sendResponseHeaders(500, -1);
-        } finally {
-            exchange.close();
+    public void handle(HttpExchange httpExchange) throws IOException {
+        try (var exchange = httpExchange) {
+            try {
+                delegate.handle(exchange);
+            } catch (NoSuchElementException e) {
+                exchange.sendResponseHeaders(404, -1);
+            } catch (IllegalArgumentException e) {
+                exchange.sendResponseHeaders(422, -1);
+            } catch (AuthenticationException e) {
+                exchange.getResponseHeaders().add("WWW-Authenticate", "Basic realm=\"url-shortener\", charset=\"UTF-8\"");
+                exchange.sendResponseHeaders(401, -1);
+            } catch (Exception e) {
+                exchange.sendResponseHeaders(500, -1);
+            }
         }
     }
 }
