@@ -56,7 +56,7 @@ public class PersistentByteArrayDao implements Dao<byte[]> {
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
         //nothing to do.
     }
 
