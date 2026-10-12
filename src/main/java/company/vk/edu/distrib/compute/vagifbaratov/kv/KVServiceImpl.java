@@ -19,7 +19,6 @@ public class KVServiceImpl implements KVService {
 
     private final HttpServer server;
     private final Dao<byte[]> dao;
-    private volatile boolean healthy = true;
 
     public KVServiceImpl(int port, Dao<byte[]> dao) throws IOException {
         this.dao = dao;
@@ -51,7 +50,6 @@ public class KVServiceImpl implements KVService {
             } catch (NoSuchElementException exception) {
                 exchange.sendResponseHeaders(404, -1);
             } catch (IOException exception) {
-                healthy = false;
                 exchange.sendResponseHeaders(503, -1);
             }
         }
@@ -60,8 +58,8 @@ public class KVServiceImpl implements KVService {
     private void dispatch(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String method = exchange.getRequestMethod();
-        if (path.equals(STATUS_PATH)) {
-            exchange.sendResponseHeaders(method.equals("GET") ?  200  : 503, -1);
+        if (STATUS_PATH.equals(path)) {
+            exchange.sendResponseHeaders("GET".equals(method) ? 200 : 503, -1);
             return;
         }
         if (!path.startsWith(ENTITY_PATH)) {
@@ -100,7 +98,8 @@ public class KVServiceImpl implements KVService {
             for (String parameter : query.split("&")) {
                 String[] pair = parameter.split("=", 2);
                 String argName = URLDecoder.decode(pair[0], StandardCharsets.UTF_8);
-                if (argName.equals(ID_ARG)) {
+
+                if (ID_ARG.equals(argName)) {
                     return pair.length == 2 ? URLDecoder.decode(pair[1], StandardCharsets.UTF_8) : "";
                 }
             }

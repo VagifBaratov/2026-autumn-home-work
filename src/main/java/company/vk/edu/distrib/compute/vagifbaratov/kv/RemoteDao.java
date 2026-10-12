@@ -1,11 +1,8 @@
 package company.vk.edu.distrib.compute.vagifbaratov.kv;
 
 import company.vk.edu.distrib.compute.Dao;
-import company.vk.edu.distrib.compute.kv.KVService;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -14,16 +11,12 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 
 /** UTF-8 adapter for the shortener's string values over the binary KV protocol. */
 public final class RemoteDao implements Dao<String> {
     private final HttpClient client = HttpClient.newHttpClient();
-
     private final String host;
     private final int port;
-
-
 
     public RemoteDao(String host, int port) {
         this.host = host;
@@ -56,7 +49,7 @@ public final class RemoteDao implements Dao<String> {
             throw new IllegalArgumentException("Key must be non-empty");
         }
 
-        var path = host + ":" + port + KVServiceImpl.ENTITY_PATH + KVServiceImpl.ID_ARG + "=";
+        var path = host + ":" + port + KVServiceImpl.ENTITY_PATH + "?" + KVServiceImpl.ID_ARG + "=";
         var request = HttpRequest.newBuilder().uri(
                 URI.create(path + URLEncoder.encode(key, StandardCharsets.UTF_8))
         );
@@ -68,20 +61,23 @@ public final class RemoteDao implements Dao<String> {
 
         }
 
+        HttpResponse<byte[]> response;
         try {
-            var response = client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
-            int status = response.statusCode();
-
-            if (status == 404 && "GET".equals(method)) {
-                throw new NoSuchElementException("Missing key: " + key);
-            }
-            if (status != expectedStatus) {
-                throw new IOException("Unexpected KV response: " + status);
-            }
-            return response.body();
+            response = client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IOException("HTTP request interrupted", exception);
         }
+
+        int status = response.statusCode();
+
+        if (status == 404 && "GET".equals(method)) {
+            throw new NoSuchElementException("Missing key: " + key);
+        }
+
+        if (status != expectedStatus) {
+            throw new IOException("Unexpected KV response: " + status);
+        }
+        return response.body();
     }
 }

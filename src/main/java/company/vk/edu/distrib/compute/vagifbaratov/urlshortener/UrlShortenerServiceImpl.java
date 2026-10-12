@@ -18,13 +18,42 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     private final HttpServer server;
     private Dao<String> linksDao;
     private final Dao<String> credentialsDao;
-    private boolean started;
-    private boolean stopped;
+    private State state = State.NEW;
+
+    private enum State {
+        NEW, STARTED, STOPPED
+    }
 
     public UrlShortenerServiceImpl(int port, Dao<String> linksDao, Dao<String> credentialsDao) throws IOException {
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
         this.linksDao = linksDao;
         this.credentialsDao = credentialsDao;
+    }
+
+    @Override
+    public synchronized void setLinksDao(Dao<String> dao) {
+        if (state != State.NEW) {
+            throw new IllegalStateException("Cannot replace DAO after start or stop");
+        }
+
+        Objects.requireNonNull(dao, "dao");
+        if (linksDao == dao) {
+            return;
+        }
+        try {
+            linksDao.close();
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
+
+        linksDao = dao;
+    }
+
+    @Override
+    public void start() {
+        if (state != State.NEW) {
+            throw new IllegalStateException("Service was already started or was stopped");
+        }
 
         server.createContext(
                 "/v0/status",
@@ -34,7 +63,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
                 "/v0/links",
                 new ErrorHandler(
                         new BasicAuthHandler(
-                                new LinksHandler(port, linksDao),
+                                new LinksHandler(server.getAddress().getPort(), linksDao),
                                 credentialsDao
                         )
                 )
@@ -46,42 +75,18 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
         );
 
         server.createContext("/", new ErrorHandler(new RedirectHandler(linksDao)));
-    }
-
-    @Override
-    public synchronized void setLinksDao(Dao<String> dao) {
-        if (started || stopped) {
-            throw new IllegalStateException("Cannot replace DAO after start or stop");
-        }
-        Objects.requireNonNull(dao, "dao");
-        if (linksDao == dao) {
-            return;
-        }
-        try {
-            linksDao.close();
-        } catch (IOException exception) {
-            throw new UncheckedIOException(exception);
-        }
-        linksDao = dao;
-    }
-
-    @Override
-    public void start() {
-        if (started) {
-            throw new IllegalStateException("Service was already started");
-        }
 
         server.start();
-        started = true; stopped = false;
+        state = State.STARTED;
     }
 
     @Override
     public void stop() {
-        if (stopped) {
+        if (state != State.STARTED) {
             throw new IllegalStateException("Service was already stopped");
         }
         server.stop(1);
-        stopped = true; started = false;
+        state = State.STOPPED;
         try {
             linksDao.close();
         } catch (IOException e) {

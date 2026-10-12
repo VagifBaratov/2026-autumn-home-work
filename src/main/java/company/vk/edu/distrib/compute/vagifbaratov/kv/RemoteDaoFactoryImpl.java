@@ -1,14 +1,10 @@
 package company.vk.edu.distrib.compute.vagifbaratov.kv;
 
 import company.vk.edu.distrib.compute.Dao;
-import company.vk.edu.distrib.compute.kv.KVService;
 import company.vk.edu.distrib.compute.kv.RemoteDaoFactory;
 import company.vk.edu.distrib.compute.kv.RemoteDaoFactoryTest;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.HttpURLConnection;
-import java.util.Optional;
 
 @RemoteDaoFactoryTest
 public class RemoteDaoFactoryImpl implements RemoteDaoFactory<String> {
