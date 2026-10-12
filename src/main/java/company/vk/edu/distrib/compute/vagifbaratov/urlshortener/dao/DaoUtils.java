@@ -40,6 +40,7 @@ public final class DaoUtils {
 
         properties.putAll(storage);
 
+        Files.createDirectories(filepath.toAbsolutePath().getParent());
         try (var writer = Files.newBufferedWriter(filepath)) {
             properties.store(writer, "Links storage");
         }
