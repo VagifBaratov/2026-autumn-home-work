@@ -18,28 +18,30 @@ public final class RemoteDao implements Dao<String> {
     private final String host;
     private final int port;
 
+    private static final int NOT_FOUND = 404;
+
     public RemoteDao(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
     @Override
-    public synchronized String get(String key) throws IOException {
+    public String get(String key) throws IOException {
         return new String(request("GET", key, new byte[0], 200), StandardCharsets.UTF_8);
     }
 
     @Override
-    public synchronized void upsert(String key, String value) throws IOException {
+    public void upsert(String key, String value) throws IOException {
         request("PUT", key, Objects.requireNonNull(value, "value").getBytes(StandardCharsets.UTF_8), 201);
     }
 
     @Override
-    public synchronized void delete(String key) throws IOException {
+    public void delete(String key) throws IOException {
         request("DELETE", key, new byte[0], 202);
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
         client.close();
     }
 
@@ -49,21 +51,11 @@ public final class RemoteDao implements Dao<String> {
             throw new IllegalArgumentException("Key must be non-empty");
         }
 
-        var path = host + ":" + port + KVServiceImpl.ENTITY_PATH + "?" + KVServiceImpl.ID_ARG + "=";
-        var request = HttpRequest.newBuilder().uri(
-                URI.create(path + URLEncoder.encode(key, StandardCharsets.UTF_8))
-        );
-
-        switch (method) {
-            case "GET" -> request.GET();
-            case "DELETE" -> request.DELETE();
-            default -> request.PUT(HttpRequest.BodyPublishers.ofByteArray(value));
-
-        }
+        var request = buildRequest(method, key, value);
 
         HttpResponse<byte[]> response;
         try {
-            response = client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
+            response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IOException("HTTP request interrupted", exception);
@@ -71,7 +63,7 @@ public final class RemoteDao implements Dao<String> {
 
         int status = response.statusCode();
 
-        if (status == 404 && "GET".equals(method)) {
+        if (status == NOT_FOUND && "GET".equals(method)) {
             throw new NoSuchElementException("Missing key: " + key);
         }
 
@@ -80,4 +72,29 @@ public final class RemoteDao implements Dao<String> {
         }
         return response.body();
     }
+
+    private HttpRequest buildRequest(String method, String key, byte[] value) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(buildEntityUri(key));
+
+        switch (method) {
+            case "GET" -> builder.GET();
+            case "DELETE" -> builder.DELETE();
+            case "PUT" -> builder.PUT(HttpRequest.BodyPublishers.ofByteArray(value));
+            default -> throw new IllegalArgumentException(
+                    "Unsupported method: " + method
+            );
+        }
+
+        return builder.build();
+    }
+
+    private URI buildEntityUri(String key) {
+        String encodedKey = URLEncoder.encode(key, StandardCharsets.UTF_8);
+        String path = host + ":" + port + KVServiceImpl.ENTITY_PATH
+                + "?" + KVServiceImpl.ID_ARG + "=";
+
+        return URI.create(path + encodedKey);
+    }
 }
+

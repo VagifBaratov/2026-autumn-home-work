@@ -31,7 +31,7 @@ public class UrlShortenerServiceImpl implements UrlShortenerService {
     }
 
     @Override
-    public synchronized void setLinksDao(Dao<String> dao) {
+    public void setLinksDao(Dao<String> dao) {
         if (state != State.NEW) {
             throw new IllegalStateException("Cannot replace DAO after start or stop");
         }

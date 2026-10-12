@@ -27,12 +27,12 @@ public class KVServiceImpl implements KVService {
     }
 
     @Override
-    public synchronized void start() {
+    public void start() {
         server.start();
     }
 
     @Override
-    public synchronized void stop() {
+    public void stop() {
         server.stop(0);
         try {
             dao.close();
@@ -66,11 +66,17 @@ public class KVServiceImpl implements KVService {
             exchange.sendResponseHeaders(404, -1);
             return;
         }
+
+        handleEntity(exchange);
+    }
+
+    private void handleEntity(HttpExchange exchange) throws IOException {
         String key = extractKey(exchange);
         if (key.isEmpty()) {
             throw new IllegalArgumentException("Key must be non-empty");
         }
-        switch (method) {
+
+        switch (exchange.getRequestMethod()) {
             case "GET" -> {
                 byte[] value = dao.get(key);
                 exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
