@@ -7,6 +7,8 @@ import company.vk.edu.distrib.compute.urlshortener.UrlShortenerTest;
 import java.io.IOException;
 import java.nio.file.Path;
 
+@UrlShortenerTest
+@UrlShortenerAuthTest
 public class UrlShortenerServiceFactory extends AbstractHttpServiceFactory<UrlShortenerServiceImpl> {
 
     private static final Path DATA_DIRECTORY = Path.of(
