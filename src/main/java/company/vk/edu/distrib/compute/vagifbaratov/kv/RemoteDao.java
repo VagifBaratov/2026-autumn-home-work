@@ -20,6 +20,7 @@ public final class RemoteDao implements Dao<String> {
 
     private static final int NOT_FOUND = 404;
     private static final String GET = "GET";
+
     public RemoteDao(String host, int port) {
         this.host = host;
         this.port = port;
