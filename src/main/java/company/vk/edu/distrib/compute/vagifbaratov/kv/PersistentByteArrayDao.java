@@ -24,7 +24,7 @@ public class PersistentByteArrayDao implements Dao<byte[]> {
     }
 
     @Override
-    public synchronized byte[] get(String key) throws IOException {
+    public byte[] get(String key) throws IOException {
         Path file = pathFor(key);
         try {
             return Files.readAllBytes(file);
@@ -34,7 +34,7 @@ public class PersistentByteArrayDao implements Dao<byte[]> {
     }
 
     @Override
-    public synchronized void upsert(String key, byte[] value) throws IOException {
+    public void upsert(String key, byte[] value) throws IOException {
         Path file = pathFor(key);
         Objects.requireNonNull(value, "value is null");
         Path temporary = Files.createTempFile(filepath, "upsert-", ".tmp");
@@ -51,12 +51,12 @@ public class PersistentByteArrayDao implements Dao<byte[]> {
     }
 
     @Override
-    public synchronized void delete(String key) throws IOException {
+    public void delete(String key) throws IOException {
         Files.deleteIfExists(pathFor(key));
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
         //nothing to do.
     }
 
