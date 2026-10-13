@@ -21,7 +21,7 @@ public class InternalHandler implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
         final var contentType = exchange.getRequestHeaders().getFirst("Content-Type");
         final var body = new String(exchange.getRequestBody().readAllBytes());
-        log.info("Received req with: content-type {}, body: {}", contentType, body);
+        log.info("Received req with: content-type {}", contentType);
 
         if (!Objects.equals(contentType, "text/html; charset=utf-8")) {
             throw new IllegalArgumentException("Invalid content type: " + contentType);
