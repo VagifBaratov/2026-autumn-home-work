@@ -19,7 +19,7 @@ public final class RemoteDao implements Dao<String> {
     private final int port;
 
     private static final int NOT_FOUND = 404;
-
+    private static final String GET = "GET";
     public RemoteDao(String host, int port) {
         this.host = host;
         this.port = port;
@@ -63,7 +63,7 @@ public final class RemoteDao implements Dao<String> {
 
         int status = response.statusCode();
 
-        if (status == NOT_FOUND && "GET".equals(method)) {
+        if (status == NOT_FOUND && GET.equals(method)) {
             throw new NoSuchElementException("Missing key: " + key);
         }
 
