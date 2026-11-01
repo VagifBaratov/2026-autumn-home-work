@@ -15,7 +15,9 @@ public class KVServiceFactory extends AbstractHttpServiceFactory<KVService> {
 
     @Override
     protected KVService doCreate(int port) throws IOException {
-        PersistentByteArrayDao dao = new PersistentByteArrayDao(DATA_DIRECTORY);
+        PersistentByteArrayDao dao = new PersistentByteArrayDao(
+                DATA_DIRECTORY.resolve(Integer.toString(port))
+        );
         try {
             return new KVServiceImpl(port, dao);
         } catch (IOException | RuntimeException exception) {
