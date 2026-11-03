@@ -14,8 +14,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static company.vk.edu.distrib.compute.vagifbaratov.kv.replication.ReplicaUtils.successStatus;
+
 public class ReplicaCoordinator implements AutoCloseable {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(2);
+    private static final int OK = 200;
+    private static final int NOT_FOUND = 404;
+    private static final int UNAVAILABLE = 503;
 
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReplicaClient replicaClient;
@@ -39,7 +44,7 @@ public class ReplicaCoordinator implements AutoCloseable {
             return collectResponses(responses, method, ack, cfg.replicationFactor());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new ReplicaResponse(503, new byte[0]);
+            return new ReplicaResponse(UNAVAILABLE, new byte[0]);
         }
     }
 
@@ -50,7 +55,10 @@ public class ReplicaCoordinator implements AutoCloseable {
             int replicas
     ) throws InterruptedException {
         int success = 0;
-        ReplicaResponse result = new ReplicaResponse("GET".equals(method) ? 404 : successStatus(method), new byte[0]);
+        ReplicaResponse result = new ReplicaResponse(
+                "GET".equals(method) ? NOT_FOUND : successStatus(method),
+                new byte[0]
+        );
 
         long deadline = System.nanoTime() + REQUEST_TIMEOUT.toNanos();
 
@@ -63,7 +71,7 @@ public class ReplicaCoordinator implements AutoCloseable {
             if (isAck(method, response.status())) {
                 success++;
 
-                if (response.status() == 200) {
+                if (response.status() == OK) {
                     result = response;
                 }
             }
@@ -77,7 +85,7 @@ public class ReplicaCoordinator implements AutoCloseable {
             }
         }
 
-        return new ReplicaResponse(503, new byte[0]);
+        return new ReplicaResponse(UNAVAILABLE, new byte[0]);
     }
 
     private ReplicaResponse awaitResponse(
@@ -92,21 +100,12 @@ public class ReplicaCoordinator implements AutoCloseable {
         try {
             return completed.get();
         } catch (ExecutionException e) {
-            return new ReplicaResponse(503, new byte[0]);
+            return new ReplicaResponse(UNAVAILABLE, new byte[0]);
         }
     }
 
     private boolean isAck(String method, int status) {
-        return status == successStatus(method) || ("GET".equals(method) && status == 404);
-    }
-
-    private static int successStatus(String method) {
-        return switch (method) {
-            case "GET" -> 200;
-            case "PUT" -> 201;
-            case "DELETE" -> 202;
-            default -> throw new IllegalArgumentException("Unsupported method");
-        };
+        return status == successStatus(method) || ("GET".equals(method) && status == NOT_FOUND);
     }
 
     private int ownerIndex(String key, int...ports) {

@@ -14,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.NoSuchElementException;
 
+import static company.vk.edu.distrib.compute.vagifbaratov.kv.replication.ReplicaUtils.successStatus;
+
 public class ReplicaClientImpl implements ReplicaClient, AutoCloseable {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(1);
     private static final String REPLICA_HEADER = KVServiceImpl.REPLICA_HEADER;
@@ -76,15 +78,6 @@ public class ReplicaClientImpl implements ReplicaClient, AutoCloseable {
             default -> throw new IllegalArgumentException("Unsupported method");
         }
         return new ReplicaResponse(successStatus(method), new byte[0]);
-    }
-
-    private static int successStatus(String method) {
-        return switch (method) {
-            case "GET" -> 200;
-            case "PUT" -> 201;
-            case "DELETE" -> 202;
-            default -> throw new IllegalArgumentException("Unsupported method");
-        };
     }
 
     @Override
