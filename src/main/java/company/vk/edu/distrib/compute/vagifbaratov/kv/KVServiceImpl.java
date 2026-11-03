@@ -25,6 +25,12 @@ public class KVServiceImpl implements KVService {
     public static final int MIN_ACK = 1;
     public static final String REPLICA_HEADER = "X-KV-Replica";
 
+    private static final int OK = 200;
+    private static final int BAD_REQUEST = 400;
+    private static final int NOT_FOUND = 404;
+    private static final int NOT_ALLOWED = 405;
+    private static final int UNAVAILABLE = 503;
+
     private final int port;
     private final HttpServer server;
     private final ReplicaClientImpl replicaClient;
@@ -66,11 +72,11 @@ public class KVServiceImpl implements KVService {
             try {
                 dispatch(exchange);
             } catch (IllegalArgumentException exception) {
-                exchange.sendResponseHeaders(400, -1);
+                exchange.sendResponseHeaders(BAD_REQUEST, -1);
             } catch (NoSuchElementException exception) {
-                exchange.sendResponseHeaders(404, -1);
+                exchange.sendResponseHeaders(NOT_FOUND, -1);
             } catch (IOException exception) {
-                exchange.sendResponseHeaders(503, -1);
+                exchange.sendResponseHeaders(UNAVAILABLE, -1);
             }
         }
     }
@@ -79,12 +85,12 @@ public class KVServiceImpl implements KVService {
         String path = exchange.getRequestURI().getPath();
         String method = exchange.getRequestMethod();
         if (STATUS_PATH.equals(path)) {
-            exchange.sendResponseHeaders("GET".equals(method) ? 200 : 503, -1);
+            exchange.sendResponseHeaders("GET".equals(method) ? OK : NOT_ALLOWED, -1);
             return;
         }
         if (ENTITY_PATH.equals(path)) {
             if (!"GET".equals(method) && !"PUT".equals(method) && !"DELETE".equals(method)) {
-                exchange.sendResponseHeaders(405, -1);
+                exchange.sendResponseHeaders(NOT_ALLOWED, -1);
                 return;
             }
 
@@ -92,7 +98,7 @@ public class KVServiceImpl implements KVService {
             return;
         }
 
-        exchange.sendResponseHeaders(404, -1);
+        exchange.sendResponseHeaders(NOT_FOUND, -1);
     }
 
     private void handleEntity(HttpExchange exchange) throws IOException {
@@ -126,7 +132,11 @@ public class KVServiceImpl implements KVService {
             response = coordinator.execute(method, key, body, ack, cfg);
         }
 
-        if (response.status() == 200) {
+        sendResponse(exchange, response);
+    }
+
+    private static void sendResponse(HttpExchange exchange, ReplicaResponse response) throws IOException {
+        if (response.status() == OK) {
             exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
         }
         exchange.sendResponseHeaders(response.status(), response.body().length == 0 ? -1 : response.body().length);

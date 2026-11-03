@@ -19,6 +19,7 @@ public class ReplicaClientImpl implements ReplicaClient, AutoCloseable {
     private static final String REPLICA_HEADER = KVServiceImpl.REPLICA_HEADER;
     private static final String ENTITY_PATH = KVServiceImpl.ENTITY_PATH;
     private static final String ID_ARG = KVServiceImpl.ID_ARG;
+    private static final int NOT_FOUND = 404;
 
     private final int port;
     private final Dao<byte[]> dao;
@@ -67,7 +68,7 @@ public class ReplicaClientImpl implements ReplicaClient, AutoCloseable {
                 try {
                     return new ReplicaResponse(successStatus(method), dao.get(key));
                 } catch (NoSuchElementException e) {
-                    return new ReplicaResponse(404, new byte[0]);
+                    return new ReplicaResponse(NOT_FOUND, new byte[0]);
                 }
             }
             case "PUT" -> dao.upsert(key, body);
