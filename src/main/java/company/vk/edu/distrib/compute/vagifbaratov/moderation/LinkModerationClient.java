@@ -18,7 +18,7 @@ import java.util.concurrent.BlockingQueue;
 
 public final class LinkModerationClient extends KafkaWorker {
     private static final Logger log = LoggerFactory.getLogger(LinkModerationClient.class);
-    private final BlockingQueue<LinkCreatedEvent> pending = new ArrayBlockingQueue<>(1024);
+    private final BlockingQueue<ProducerRecord<String, String>> pending = new ArrayBlockingQueue<>(1024);
     private final Dao<String> linksDao;
 
     public LinkModerationClient(String bootstrapServers, Dao<String> linksDao) {
@@ -27,7 +27,10 @@ public final class LinkModerationClient extends KafkaWorker {
     }
 
     public void linkCreated(String id, String url) {
-        if (!pending.offer(new LinkCreatedEvent(id, url, Instant.now()))) {
+        LinkCreatedEvent event = new LinkCreatedEvent(id, url, Instant.now());
+        ProducerRecord<String, String> record = new ProducerRecord<>(
+                "links.created", id, EventCodecUtils.encode(event));
+        if (!pending.offer(record) && log.isWarnEnabled()) {
             log.warn("Moderation queue full; link {} stay available", id);
         }
     }
@@ -35,23 +38,27 @@ public final class LinkModerationClient extends KafkaWorker {
     @Override
     protected void publishPending(Producer<String, String> producer) {
         for (int index = 0; index < 32; index++) {
-            LinkCreatedEvent event = pending.peek();
-            if (event == null) {
+            ProducerRecord<String, String> record = pending.peek();
+            if (record == null) {
                 return;
             }
 
-            var record = new ProducerRecord<>("links.created", event.id(), EventCodecUtils.encode(event));
-
             producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
-                    log.warn("Could not publish link {} for moderation", event.id(), exception);
-                    if (!pending.offer(event)) {
-                        log.warn("Moderation retry queue is full for link {}", event.id());
-                    }
+                    handleSendFailure(record, exception);
                 }
             });
 
             pending.remove();
+        }
+    }
+
+    private void handleSendFailure(ProducerRecord<String, String> record, Exception exception) {
+        if (log.isWarnEnabled()) {
+            log.warn("couldn't publish link {} for moderation", record.key(), exception);
+        }
+        if (!pending.offer(record) && log.isWarnEnabled()) {
+            log.warn("Moderation retry queue is full for link {}", record.key());
         }
     }
 

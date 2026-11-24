@@ -1,6 +1,7 @@
 package company.vk.edu.distrib.compute.vagifbaratov.moderation;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -23,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class KafkaWorker implements AutoCloseable {
     private static final int JOIN_TIMEOUT = 5000;
-
+    private static final int CONSUMER_POOL_TIMEOUT = 200;
     private static final Logger log = LoggerFactory.getLogger(KafkaWorker.class);
     private final String bootstrapServers;
     private final String topic;
@@ -64,7 +65,9 @@ public abstract class KafkaWorker implements AutoCloseable {
                         consume(consumer, producer);
                     } catch (RuntimeException exception) {
                         if (running.get()) {
-                            log.warn("Kafka iteration failed for {}", topic, exception);
+                            if (log.isWarnEnabled()) {
+                                log.warn("Kafka iteration failed for {}", topic, exception);
+                            }
                             Thread.sleep(200);
                         }
                     }
@@ -77,28 +80,48 @@ public abstract class KafkaWorker implements AutoCloseable {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
         } catch (RuntimeException exception) {
-            log.warn("Kafka worker stopped for {}", topic, exception);
+            if (log.isWarnEnabled()) {
+                log.warn("Kafka worker stopped for {}", topic, exception);
+            }
         }
     }
 
-    private void consume(KafkaConsumer<String, String> consumer, KafkaProducer<String, String> producer) {
-        for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(200))) {
-            if (!running.get()) {
-                return;
+    final void consume(Consumer<String, String> consumer, Producer<String, String> producer) {
+        var records = consumer.poll(Duration.ofMillis(CONSUMER_POOL_TIMEOUT));
+        for (TopicPartition partition : records.partitions()) {
+            for (ConsumerRecord<String, String> record : records.records(partition)) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
+                if (!processRecord(consumer, producer, partition, record)) {
+                    break;
+                }
             }
+        }
+    }
 
-            TopicPartition partition = new TopicPartition(record.topic(), record.partition());
-            try {
-                process(record, producer);
-                consumer.commitSync(
-                        Map.of(partition, new OffsetAndMetadata(record.offset() + 1)),
-                        Duration.ofSeconds(1)
-                );
-            } catch (Exception exception) {
+    private boolean processRecord(
+        Consumer<String, String> consumer,
+        Producer<String, String> producer,
+        TopicPartition partition,
+        ConsumerRecord<String, String> record
+    ) {
+        try {
+            process(record, producer);
+            consumer.commitSync(
+                    Map.of(partition, new OffsetAndMetadata(record.offset() + 1)),
+                    Duration.ofSeconds(1)
+            );
+            return true;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception exception) {
+            if (log.isWarnEnabled()) {
                 log.warn("Unable to process Kafka record from {}", topic, exception);
-                consumer.seek(partition, record.offset());
-                return;
             }
+            consumer.seek(partition, record.offset());
+            return false;
         }
     }
 
@@ -111,7 +134,6 @@ public abstract class KafkaWorker implements AutoCloseable {
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         properties.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, false);
-        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
         return properties;
     }
 
